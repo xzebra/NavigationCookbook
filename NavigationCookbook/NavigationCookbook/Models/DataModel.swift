@@ -30,6 +30,13 @@ class DataModel: ObservableObject {
             .filter { $0.category == category }
             .sorted { $0.name < $1.name }
     }
+    
+    func recipes(in category: Category?, nameFilter: String) -> [Recipe] {
+        recipes
+            .filter { $0.category == category }
+            .filter { nameFilter == "" ? true : $0.name.contains(nameFilter) }
+            .sorted { $0.name < $1.name }
+    }
 
     func recipes(relatedTo recipe: Recipe) -> [Recipe] {
         recipes
@@ -88,6 +95,9 @@ private let builtInRecipes: [Recipe] = {
         "Tiramisu": Recipe(
             name: "Tiramisu", category: .dessert,
             ingredients: []),
+        "Butter": Recipe(
+            name: "Butter", category: .dessert,
+            ingredients: []),
         "Crêpe": Recipe(
             name: "Crêpe", category: .pancake,
             ingredients: []),
@@ -136,8 +146,8 @@ private let builtInRecipes: [Recipe] = {
         recipes["Pie Crust"]!.id,
         recipes["Fruit Pie Filling"]!.id
     ]
-
-    recipes["Pie Crust"]!.related = [recipes["Fruit Pie Filling"]!.id]
+    
+    recipes["Pie Crust"]!.related = [recipes["Fruit Pie Filling"]!.id, recipes["Butter"]!.id]
     recipes["Fruit Pie Filling"]!.related = [recipes["Pie Crust"]!.id]
 
     return Array(recipes.values)

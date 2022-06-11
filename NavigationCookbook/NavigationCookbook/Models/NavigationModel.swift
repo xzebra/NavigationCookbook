@@ -11,11 +11,12 @@ import Combine
 final class NavigationModel: ObservableObject, Codable {
     @Published var selectedCategory: Category?
     @Published var recipePath: [Recipe]
+    @Published var currentRecipeStack: [Recipe]
     @Published var columnVisibility: NavigationSplitViewVisibility
     
     private lazy var decoder = JSONDecoder()
     private lazy var encoder = JSONEncoder()
-
+    
     init(columnVisibility: NavigationSplitViewVisibility = .automatic,
          selectedCategory: Category? = nil,
          recipePath: [Recipe] = []
@@ -23,13 +24,14 @@ final class NavigationModel: ObservableObject, Codable {
         self.columnVisibility = columnVisibility
         self.selectedCategory = selectedCategory
         self.recipePath = recipePath
+        self.currentRecipeStack = []
     }
-
+    
     var selectedRecipe: Recipe? {
         get { recipePath.first }
         set { recipePath = [newValue].compactMap { $0 } }
     }
-
+    
     var jsonData: Data? {
         get { try? encoder.encode(self) }
         set {
@@ -41,13 +43,13 @@ final class NavigationModel: ObservableObject, Codable {
             columnVisibility = model.columnVisibility
         }
     }
-
+    
     var objectWillChangeSequence: AsyncPublisher<Publishers.Buffer<ObservableObjectPublisher>> {
         objectWillChange
             .buffer(size: 1, prefetch: .byRequest, whenFull: .dropOldest)
             .values
     }
-
+    
     required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.selectedCategory = try container.decodeIfPresent(
@@ -57,13 +59,24 @@ final class NavigationModel: ObservableObject, Codable {
         self.recipePath = recipePathIds.compactMap { DataModel.shared[$0] }
         self.columnVisibility = try container.decode(
             NavigationSplitViewVisibility.self, forKey: .columnVisibility)
+        self.currentRecipeStack = []
     }
-
+    
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encodeIfPresent(selectedCategory, forKey: .selectedCategory)
         try container.encode(recipePath.map(\.id), forKey: .recipePathIds)
         try container.encode(columnVisibility, forKey: .columnVisibility)
+    }
+    
+    func visitRelated(recipe: Recipe) {
+        if let index = currentRecipeStack.firstIndex(of: recipe) {
+            // Recipe found in the stack path -> pop everything back.
+            currentRecipeStack.removeSubrange((index+1)...)
+        } else {
+            // Append recipe to the stack path
+            currentRecipeStack.append(recipe)
+        }
     }
 
     enum CodingKeys: String, CodingKey {

@@ -10,12 +10,43 @@ import SwiftUI
 struct ChallengeContentView: View {
     @Binding var showExperiencePicker: Bool
     @EnvironmentObject private var navigationModel: NavigationModel
+    @State private var searchText: String = ""
     var dataModel = DataModel.shared
 
     var body: some View {
-        VStack {
-            Text("Put your navigation experience here")
-            ExperienceButton(isActive: $showExperiencePicker)
+        NavigationSplitView {
+            List(selection: $navigationModel.selectedRecipe) {
+                ForEach(Category.allCases) { category in
+                    Section(category.localizedName) {
+                        ForEach(dataModel.recipes(in: category, nameFilter: searchText)) { recipe in
+                            NavigationLink(recipe.name, value: recipe)
+                        }
+                    }
+                }
+            }
+            .searchable(text: $searchText, prompt: "Search recipe")
+            .listStyle(.sidebar)
+            .navigationTitle("Cookbook")
+            .toolbar {
+                ExperienceButton(isActive: $showExperiencePicker)
+            }
+        } detail: {
+            NavigationStack(path: $navigationModel.currentRecipeStack) {
+                RecipeDetail(recipe: navigationModel.selectedRecipe, relatedLink:  { related in
+                        RecipeTile(recipe: related)
+                            .onTapGesture {
+                                navigationModel.visitRelated(recipe: related)
+                            }
+                }, path: navigationModel.currentRecipeStack)
+            }
+            .navigationDestination(for: Recipe.self) { recipe in
+                RecipeDetail(recipe: recipe, relatedLink:  { related in
+                    RecipeTile(recipe: related)
+                        .onTapGesture {
+                            navigationModel.visitRelated(recipe: related)
+                        }
+                }, path: navigationModel.currentRecipeStack)
+            }
         }
     }
 }
@@ -23,5 +54,10 @@ struct ChallengeContentView: View {
 struct ChallengeContentView_Previews: PreviewProvider {
     static var previews: some View {
         ChallengeContentView(showExperiencePicker: .constant(false))
+            .environmentObject(NavigationModel(
+                columnVisibility: .all,
+                selectedCategory: .dessert,
+                recipePath: [.mock]))
+            .previewInterfaceOrientation(.landscapeRight)
     }
 }

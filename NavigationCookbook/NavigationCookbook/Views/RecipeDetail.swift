@@ -11,6 +11,9 @@ import SwiftUI
 struct RecipeDetail<Link: View>: View {
     var recipe: Recipe?
     var relatedLink: (Recipe) -> Link
+    var path: [Recipe]?
+    
+    @EnvironmentObject private var navigationModel: NavigationModel
 
     var body: some View {
         // Workaround for a known issue where `NavigationSplitView` and
@@ -19,7 +22,7 @@ struct RecipeDetail<Link: View>: View {
         // macOS 13 Release Notes. (91311311)"
         ZStack {
             if let recipe = recipe {
-                Content(recipe: recipe, relatedLink: relatedLink)
+                RecipeDetailContent(recipe: recipe, relatedLink: relatedLink)
             } else {
                 Text("Choose a recipe")
                     .navigationTitle("")
@@ -28,11 +31,53 @@ struct RecipeDetail<Link: View>: View {
     }
 }
 
-private struct Content<Link: View>: View {
+// MARK: conditional rendering of breadcrumb when exploring recipes related stack view
+// If there is no path, there is no need to show the icon. navigationTitle should not
+// show the dropdown icon when there are no buttons inside of it. But we have to
+// implement it ourselves.
+struct DropdownBreadcrumb: ViewModifier {
+    var titleText: String
+    
+    @EnvironmentObject private var navigationModel: NavigationModel
+    
+    func body(content: Content) -> some View {
+        let path = navigationModel.currentRecipeStack
+        
+        if path.isEmpty {
+            content.navigationTitle(titleText)
+        } else {
+            content
+                .navigationTitle(titleText) {
+                    let current = navigationModel.selectedRecipe
+                    if let current = current {
+                        Button(current.name) {
+                            navigationModel.currentRecipeStack.removeAll()
+                        }
+                    }
+                    ForEach(path) { recipeInPath in
+                        Button(recipeInPath.name) {
+                            navigationModel.visitRelated(recipe: recipeInPath)
+                        }
+                    }
+                }
+        }
+    }
+}
+
+extension View {
+    func breadcrumbed(withTitle title: String) -> some View {
+        modifier(DropdownBreadcrumb(titleText: title))
+    }
+}
+
+
+private struct RecipeDetailContent<Link: View>: View {
     var recipe: Recipe
     var dataModel = DataModel.shared
     var relatedLink: (Recipe) -> Link
-
+    
+    @EnvironmentObject private var navigationModel: NavigationModel
+    
     var body: some View {
         ScrollView {
             ViewThatFits(in: .horizontal) {
@@ -41,7 +86,8 @@ private struct Content<Link: View>: View {
             }
             .padding()
         }
-        .navigationTitle(recipe.name)
+        .breadcrumbed(withTitle: recipe.name)
+        .navigationBarTitleDisplayMode(.inline)
     }
 
     var wideDetails: some View {
