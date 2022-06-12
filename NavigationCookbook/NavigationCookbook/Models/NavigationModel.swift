@@ -10,9 +10,14 @@ import Combine
 
 final class NavigationModel: ObservableObject, Codable {
     @Published var selectedCategory: Category?
-    @Published var recipePath: [Recipe]
     @Published var currentRecipeStack: [Recipe]
     @Published var columnVisibility: NavigationSplitViewVisibility
+    @Published var recipePath: [Recipe] {
+        // MARK: Restore related recipes stack when changing selected recipe
+        willSet(newVal) {
+            currentRecipeStack.removeAll()
+        }
+    }
     
     private lazy var decoder = JSONDecoder()
     private lazy var encoder = JSONEncoder()
@@ -69,6 +74,7 @@ final class NavigationModel: ObservableObject, Codable {
         try container.encode(columnVisibility, forKey: .columnVisibility)
     }
     
+    // MARK: Handle visiting related recipe
     func visitRelated(recipe: Recipe) {
         if let index = currentRecipeStack.firstIndex(of: recipe) {
             // Recipe found in the stack path -> pop everything back.
