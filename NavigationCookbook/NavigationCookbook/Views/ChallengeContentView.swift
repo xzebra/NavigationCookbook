@@ -33,18 +33,22 @@ struct ChallengeContentView: View {
         } detail: {
             NavigationStack(path: $navigationModel.currentRecipeStack) {
                 RecipeDetail(recipe: navigationModel.selectedRecipe, relatedLink:  { related in
+                    Button {
+                        navigationModel.visitRelated(recipe: related)
+                    } label: {
                         RecipeTile(recipe: related)
-                            .onTapGesture {
-                                navigationModel.visitRelated(recipe: related)
-                            }
+                    }
+                    .buttonStyle(.plain)
                 }, path: navigationModel.currentRecipeStack)
             }
             .navigationDestination(for: Recipe.self) { recipe in
                 RecipeDetail(recipe: recipe, relatedLink:  { related in
-                    RecipeTile(recipe: related)
-                        .onTapGesture {
-                            navigationModel.visitRelated(recipe: related)
-                        }
+                    Button {
+                        navigationModel.visitRelated(recipe: related)
+                    } label: {
+                        RecipeTile(recipe: related)
+                    }
+                    .buttonStyle(.plain)
                 }, path: navigationModel.currentRecipeStack)
             }
         }
